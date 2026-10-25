@@ -174,9 +174,9 @@ void make_pass_saitan(){
 			}
 		}
 		if(x_saitan==G_goalpass_x[G_goal_number]&&y_saitan==G_goalpass_y[G_goal_number]){
-//			if(pass[count_saitan]>0){
-//				count_saitan++;
-//			}
+			if(pass[count_saitan]>0){
+				count_saitan++;
+			}
 			count_saitan2=count_saitan;				//pass[count_saitan2]は0最後の印
 			break;
 		}

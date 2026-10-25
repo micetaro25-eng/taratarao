@@ -40,6 +40,7 @@ void set_goalpass_07(){
 void set_goalkiti(){
 	int dire_kiti;
 	int x_kiti,y_kiti;
+	int i_end;
 	x_kiti=G_look_position_x;
 	y_kiti=G_look_position_y;
 	dire_kiti=G_direction;
@@ -110,11 +111,17 @@ void set_goalkiti(){
 				dire_kiti-=90;
 			}
 		}
-		if(((G_wall_recoder_flag[y_kiti]&(1<<x_kiti))!=(1<<x_kiti))
-			||(G_goalpass_x[G_goal_number]==x_kiti&&G_goalpass_y[G_goal_number]==y_kiti)){
-			G_goalpass_x[G_goal_number+1]=G_goalpass_x[G_goal_number];
-			G_goalpass_y[G_goal_number+1]=G_goalpass_y[G_goal_number];
-			G_goalpass_s[G_goal_number+1]=G_goalpass_s[G_goal_number];
+		if(G_goalpass_x[G_goal_number]==x_kiti&&G_goalpass_y[G_goal_number]==y_kiti){
+			break;		//既知区間の終点がゴール→経由点は挿入しない
+		}
+		if((G_wall_recoder_flag[y_kiti]&(1<<x_kiti))!=(1<<x_kiti)){
+			//(0,0)(スタートへの帰還)までの後続の経由点を全部1つ後ろにずらす
+			for(i_end=G_goal_number;!(G_goalpass_x[i_end]==0&&G_goalpass_y[i_end]==0);i_end++);
+			for(;i_end>=G_goal_number;i_end--){
+				G_goalpass_x[i_end+1]=G_goalpass_x[i_end];
+				G_goalpass_y[i_end+1]=G_goalpass_y[i_end];
+				G_goalpass_s[i_end+1]=G_goalpass_s[i_end];
+			}
 			G_goalpass_x[G_goal_number]=x_kiti;
 			G_goalpass_y[G_goal_number]=y_kiti;
 			G_goalpass_s[G_goal_number]=0;
