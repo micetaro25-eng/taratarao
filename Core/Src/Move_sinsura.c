@@ -82,6 +82,7 @@ void sinsura(float wVm, float wAmax, float wXall, float mae_sura, float ato_sura
 	int kk2, k2_sura, k2_sura2;
 	float ca1,ca2,ca3;
 	int a_step2;
+	int n_all;
 	acc_sura=wAmax/a_step;
 	acc_sura2=acc_sura;
 	a_step2=a_step;
@@ -93,6 +94,9 @@ void sinsura(float wVm, float wAmax, float wXall, float mae_sura, float ato_sura
 	if(wv2_sura!=k2_sura*(wAmax*0.001)){
 		a_step2=a_step+1;
 		k2_sura2=k2_sura-1;
+		if(k2_sura2<0){		//最大加速度に届かない場合
+			k2_sura2=0;
+		}
 		wv1_sura=wv1_sura+(wAmax*0.001);
 		wv2_sura=wAmax*0.001*k2_sura2;
 		acc_sura2=acc_sura*((wVm-wv2_sura)/(2*wv1_sura));
@@ -113,6 +117,8 @@ void sinsura(float wVm, float wAmax, float wXall, float mae_sura, float ato_sura
 		}
 	}
 
+	a_step2=a_step;
+	acc_sura2=acc_sura;
 	wv1_sura=acc_sura*0.5*0.001*(a_step-1)*(a_step);
 	wv2_sura=(wVm-(wv1_sura*2));
 	k2_sura=wv2_sura/(wAmax*0.001);
@@ -120,6 +126,9 @@ void sinsura(float wVm, float wAmax, float wXall, float mae_sura, float ato_sura
 	if(wv2_sura!=k2_sura*(wAmax*0.001)){
 		a_step2=a_step+1;
 		k2_sura2=k2_sura-1;
+		if(k2_sura2<0){		//最大加速度に届かない場合
+			k2_sura2=0;
+		}
 		wv1_sura=wv1_sura+(wAmax*0.001);
 		wv2_sura=wAmax*0.001*k2_sura2;
 		acc_sura2=acc_sura*((wVm-wv2_sura)/(2*wv1_sura));
@@ -127,11 +136,32 @@ void sinsura(float wVm, float wAmax, float wXall, float mae_sura, float ato_sura
 	wxall_sura=wVm*(2*(a_step2-1)+k2_sura2)*0.001;
 //	printf("hello %f\n\r",wxall_sura);
 
-	sub_acc=wAmax-(a_step2-1)*acc_sura2;
 	kk2=((wXall-wxall_sura)/(wVm*0.001));
 	if(kk2*(wVm*0.001)!=(wXall-wxall_sura)){
 		kk2++;
+		//距離はwVm*総ステップ数*0.001になるので，総ステップ数を固定してwVmを少し下げ，ぴったりwXallにする
+		n_all=2*(a_step2-1)+k2_sura2+kk2;
+		wVm=wXall/(n_all*0.001);
+
+		a_step2=a_step;
+		acc_sura2=acc_sura;
+		wv1_sura=acc_sura*0.5*0.001*(a_step-1)*(a_step);
+		wv2_sura=(wVm-(wv1_sura*2));
+		k2_sura=wv2_sura/(wAmax*0.001);
+		k2_sura2=k2_sura;
+		if(wv2_sura!=k2_sura*(wAmax*0.001)){
+			a_step2=a_step+1;
+			k2_sura2=k2_sura-1;
+			if(k2_sura2<0){		//最大加速度に届かない場合
+				k2_sura2=0;
+			}
+			wv1_sura=wv1_sura+(wAmax*0.001);
+			wv2_sura=wAmax*0.001*k2_sura2;
+			acc_sura2=acc_sura*((wVm-wv2_sura)/(2*wv1_sura));
+		}
+		kk2=n_all-(2*(a_step2-1)+k2_sura2);
 	}
+	sub_acc=wAmax-(a_step2-1)*acc_sura2;
 
 	while(1){
 //		do_sura_flag=1;
