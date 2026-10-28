@@ -50,9 +50,6 @@ int G_saitan_mode=0;
 
 //int G_inttimer=0;
 int G_timer=0;
-float G_theta=0.0;		//三角関数の加速で使っていた(kasoku,gensoku,gensoku_stopを書き換えたら消す)
-float G_dtheta=0.0;
-float G_Amax=0.0;
 float G_A_Motor=0.0;
 float G_a_Motor=0.0;		//1msごとの加速度の増分
 float G_preV_Motor=0.0;

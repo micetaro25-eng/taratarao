@@ -268,7 +268,6 @@ void TIM6_DAC_IRQHandler(void)
 	G_V_Motor = G_V_Motor + G_A_Motor * 0.001;
 	G_X_Motor = G_X_Motor + G_V_Motor * 0.001;
 
-//	G_wAturn = G_wAmax * sin(G_theta);
 	G_wAturn = G_wAturn + G_waturn;
 	G_prewVturn = G_wVturn;
 	G_wVturn = G_wVturn + G_wAturn * 0.001;

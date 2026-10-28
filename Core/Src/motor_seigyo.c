@@ -43,18 +43,10 @@ void setVmax_Vcom(float V_maxst,float V_maxtur1,float V_maxtur2,float V_comtur,f
 }
 
 void kasoku(float Vs, float Vm, float Amax, float Xall, int st_mode1, int st_mode2){
-	float vm_s=Vm-Vs;
-	float t1;
-	t1=(PI*vm_s)/(2*Amax);
-	G_dtheta=PI/t1;
-
-	G_timer=0;
-	G_V_Motor=Vs;
+	//VsからVmまで加速し，Xallぴったりで終わる(終わりの速度はVm)
 	G_X_Motor=0.0;
 	sumEnc_L=0.0;
 	sumEnc_R=0.0;
-	G_theta=0.0;
-	G_Amax=Amax;
 
 	G_fix_X=Xall;
 	subfix_X_flag=1;
@@ -68,37 +60,71 @@ void kasoku(float Vs, float Vm, float Amax, float Xall, int st_mode1, int st_mod
 		G_state=1;
 	}
 
-	while(1){
-		if((((float)G_timer)/1000)>=(t1-0.001)){
-			G_Amax=0.0;
-			G_preV_Motor = G_V_Motor;
-			G_V_Motor = Vm;
-			G_dtheta = 0.0;
-			G_theta = 0.0;
-			break;
-		}
-	}
-	while(1){
-		if(Xall<=G_X_Motor){
-			G_X_Motor=0.0;
-			sumEnc_L=0.0;
-			sumEnc_R=0.0;
-			break;
-		}
-	}
+	bun_daikei(Vs, Vm, Vm, Amax, Xall);
+
+	G_X_Motor=0.0;
+	sumEnc_L=0.0;
+	sumEnc_R=0.0;
 	G_fix_X=0.0;
 	subfix_X_flag=0.0;
 	ST_mode1=st_mode2;
 	ST_mode2=0;
 }
 
-void gensoku(float Vm, float Ve, float Amax, float Xall, int st_mode1, int st_mode2){
-	float vm_e=Vm-Ve;
-	float x2, t2;
-	x2=(((Vm*Vm)-(Ve*Ve))*PI)/(4*Amax);
-	t2=(PI*vm_e)/(2*Amax);
+//三角関数を使っていた時のkasoku
+//void kasoku(float Vs, float Vm, float Amax, float Xall, int st_mode1, int st_mode2){
+//	float vm_s=Vm-Vs;
+//	float t1;
+//	t1=(PI*vm_s)/(2*Amax);
+//	G_dtheta=PI/t1;
 
-	G_V_Motor=Vm;
+//	G_timer=0;
+//	G_V_Motor=Vs;
+//	G_X_Motor=0.0;
+//	sumEnc_L=0.0;
+//	sumEnc_R=0.0;
+//	G_theta=0.0;
+//	G_Amax=Amax;
+
+//	G_fix_X=Xall;
+//	subfix_X_flag=1;
+//	ST_mode1=st_mode1;
+//	ST_mode2=st_mode2;
+//	if(G_state==4){
+//		G_state=4;
+//	}else if(G_state==2){
+//		G_state=2;
+//	}else{
+//		G_state=1;
+//	}
+
+//	while(1){
+//		if((((float)G_timer)/1000)>=(t1-0.001)){
+//			G_Amax=0.0;
+//			G_preV_Motor = G_V_Motor;
+//			G_V_Motor = Vm;
+//			G_dtheta = 0.0;
+//			G_theta = 0.0;
+//			break;
+//		}
+//	}
+//	while(1){
+//		if(Xall<=G_X_Motor){
+//			G_X_Motor=0.0;
+//			sumEnc_L=0.0;
+//			sumEnc_R=0.0;
+//			break;
+//		}
+//	}
+//	G_fix_X=0.0;
+//	subfix_X_flag=0.0;
+//	ST_mode1=st_mode2;
+//	ST_mode2=0;
+//}
+
+
+void gensoku(float Vm, float Ve, float Amax, float Xall, int st_mode1, int st_mode2){
+	//Vmで進んでからVeまで減速し，Xallぴったりで終わる
 	G_X_Motor=0.0;
 	sumEnc_L=0.0;
 	sumEnc_R=0.0;
@@ -108,33 +134,62 @@ void gensoku(float Vm, float Ve, float Amax, float Xall, int st_mode1, int st_mo
 	ST_mode1=st_mode1;
 	ST_mode2=st_mode2;
 
-	while(1){
-		if(Xall-x2<=G_X_Motor){
-			break;
-		}
-	}
+	bun_daikei(Vm, Vm, Ve, Amax, Xall);
 
-	G_timer=0;
-	G_Amax=Amax;
-	G_dtheta=-PI/t2;
-	while(1){
-		if((((float)G_timer)/1000)>=(t2-0.001)){
-			G_Amax=0.0;
-			G_preV_Motor = G_V_Motor;
-			G_V_Motor=Ve;
-			G_X_Motor=0.0;
-			sumEnc_L=0.0;
-			sumEnc_R=0.0;
-			G_dtheta=0.0;
-			G_theta=0.0;
-			break;
-		}
-	}
+	G_X_Motor=0.0;
+	sumEnc_L=0.0;
+	sumEnc_R=0.0;
 	G_fix_X=0.0;
 	subfix_X_flag=0;
 	ST_mode1=st_mode2;
 	ST_mode2=0;
 }
+
+//三角関数を使っていた時のgensoku
+//void gensoku(float Vm, float Ve, float Amax, float Xall, int st_mode1, int st_mode2){
+//	float vm_e=Vm-Ve;
+//	float x2, t2;
+//	x2=(((Vm*Vm)-(Ve*Ve))*PI)/(4*Amax);
+//	t2=(PI*vm_e)/(2*Amax);
+
+//	G_V_Motor=Vm;
+//	G_X_Motor=0.0;
+//	sumEnc_L=0.0;
+//	sumEnc_R=0.0;
+
+//	G_fix_X=Xall;
+//	subfix_X_flag=1;
+//	ST_mode1=st_mode1;
+//	ST_mode2=st_mode2;
+
+//	while(1){
+//		if(Xall-x2<=G_X_Motor){
+//			break;
+//		}
+//	}
+
+//	G_timer=0;
+//	G_Amax=Amax;
+//	G_dtheta=-PI/t2;
+//	while(1){
+//		if((((float)G_timer)/1000)>=(t2-0.001)){
+//			G_Amax=0.0;
+//			G_preV_Motor = G_V_Motor;
+//			G_V_Motor=Ve;
+//			G_X_Motor=0.0;
+//			sumEnc_L=0.0;
+//			sumEnc_R=0.0;
+//			G_dtheta=0.0;
+//			G_theta=0.0;
+//			break;
+//		}
+//	}
+//	G_fix_X=0.0;
+//	subfix_X_flag=0;
+//	ST_mode1=st_mode2;
+//	ST_mode2=0;
+//}
+
 
 void renStr(float Xall, int st_mode1, int st_mode2){
 	G_X_Motor=0.0;
@@ -767,31 +822,58 @@ void sakaku_kaiten(float wVm, float wAmax, float wXall, int a_step){
 //}
 
 void gensoku_stop(float Amax){
-	float gen_t;
-	gen_t=(PI*G_V_Motor)/(2*Amax);
-
-	G_dtheta=-PI/gen_t;
-	G_timer=0;
+	//今の速度から0まで分割加速で減速する(距離は決めない)
+	int a_step2, k2;
+	float acc2, sgn;
+	if(G_V_Motor>=0.0f){
+		sgn=1.0f;
+	}else{
+		sgn=-1.0f;
+	}
 	G_X_Motor=0.0;
 	sumEnc_L=0.0;
 	sumEnc_R=0.0;
-	G_theta=0.0;
-	G_Amax=Amax;
-
-	while(1){
-		if((((float)G_timer)/1000)>=(fabs(gen_t)-0.001)){
-			G_Amax=0.0;
-			G_preV_Motor = G_V_Motor;
-			G_V_Motor=0.0;
-			G_X_Motor=0.0;
-			G_dtheta=0.0;
-			G_theta=0.0;
-			sumEnc_L=0.0;
-			sumEnc_R=0.0;
-			break;
-		}
+	G_a_Motor=0.0f;
+	G_A_Motor=0.0f;
+	if(G_V_Motor!=0.0f){
+		bun_katati(fabsf(G_V_Motor), fabsf(Amax), DAIKEI_A_STEP, &a_step2, &k2, &acc2);
+		bun_move(a_step2, k2, -acc2*sgn, -fabsf(Amax)*sgn);
 	}
+	G_preV_Motor = G_V_Motor;
+	G_V_Motor=0.0;
+	G_X_Motor=0.0;
+	sumEnc_L=0.0;
+	sumEnc_R=0.0;
 }
+
+//三角関数を使っていた時のgensoku_stop
+//void gensoku_stop(float Amax){
+//	float gen_t;
+//	gen_t=(PI*G_V_Motor)/(2*Amax);
+
+//	G_dtheta=-PI/gen_t;
+//	G_timer=0;
+//	G_X_Motor=0.0;
+//	sumEnc_L=0.0;
+//	sumEnc_R=0.0;
+//	G_theta=0.0;
+//	G_Amax=Amax;
+
+//	while(1){
+//		if((((float)G_timer)/1000)>=(fabs(gen_t)-0.001)){
+//			G_Amax=0.0;
+//			G_preV_Motor = G_V_Motor;
+//			G_V_Motor=0.0;
+//			G_X_Motor=0.0;
+//			G_dtheta=0.0;
+//			G_theta=0.0;
+//			sumEnc_L=0.0;
+//			sumEnc_R=0.0;
+//			break;
+//		}
+//	}
+//}
+
 
 void Fix_X(){
 	int n_X_now, n_X_all;
