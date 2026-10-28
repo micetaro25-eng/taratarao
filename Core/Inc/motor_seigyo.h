@@ -8,6 +8,8 @@
 #ifndef INC_MOTOR_SEIGYO_H_
 #define INC_MOTOR_SEIGYO_H_
 
+#define DAIKEI_A_STEP 10		//sakaku_daikeiの加速度を何ステップに分割して変化させるか(2以上)
+
 extern float G_V_maxst;
 extern float G_V_maxtur1;
 extern float G_V_maxtur2;

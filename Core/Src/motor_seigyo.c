@@ -160,39 +160,162 @@ void renStr(float Xall, int st_mode1, int st_mode2){
 	ST_mode2=0;
 }
 
-void sakaku_daikei(float Vs, float Vm, float Ve, float Amax, float Xall, int st_mode1, int st_mode2){
-	float vm_s=Vm-Vs, vm_e=Vm-Ve;
-	float x1, t1;
-	float x2, t2;
-	x1=(((Vm*Vm)-(Vs*Vs))*PI)/(4*Amax);
-	t1=(PI*vm_s)/(2*Amax);
-	x2=(((Vm*Vm)-(Ve*Ve))*PI)/(4*Amax);
-	t2=(PI*vm_e)/(2*Amax);
-
-	if(Xall>x1+x2){
-		G_dtheta=PI/t1;
-	}else{
-		if(Vm>0.0){
-			Vm=sqrt(((2*Amax*Xall)*PI_)+(((Vs*Vs)+(Ve*Ve))*0.5));
-		}else{
-			Vm=-sqrt(((2*Amax*Xall)*PI_)+(((Vs*Vs)+(Ve*Ve))*0.5));
+//分割加速の形を決める．速度をdvだけ変える区間を，Amax/a_stepずつ加速度を変えるa_step2-1ステップ，最大加速度k2ステップ，a_step2-1ステップで作る
+//sinsura，sakaku_kaitenと同じ計算．区間のステップ数は2*(a_step2-1)+k2
+void bun_katati(float dv, float Amax, int a_step, int *a_step2, int *k2, float *acc2){
+	float acc, wv1, wv2;
+	int k;
+	acc=Amax/a_step;
+	*a_step2=a_step;
+	*acc2=acc;
+	wv1=acc*0.5*0.001*(a_step-1)*(a_step);
+	wv2=dv-(wv1*2);
+	k=wv2/(Amax*0.001);
+	*k2=k;
+	if((wv2!=k*(Amax*0.001))||(k<0)){
+		*a_step2=a_step+1;
+		*k2=k-1;
+		if(*k2<0){		//最大加速度に届かない場合
+			*k2=0;
 		}
-		vm_s=Vm-Vs;
-		vm_e=Vm-Ve;
-		x1=(((Vm*Vm)-(Vs*Vs))*PI)/(4*Amax);
-		t1=(PI*vm_s)/(2*Amax);
-		x2=(((Vm*Vm)-(Ve*Ve))*PI)/(4*Amax);
-		t2=(PI*vm_e)/(2*Amax);
-		G_dtheta=PI/t1;
+		wv1=wv1+(Amax*0.001);
+		wv2=Amax*0.001*(*k2);
+		*acc2=acc*((dv-wv2)/(2*wv1));
+	}
+}
+
+//it.cの加算で進む距離．加速区間t_aステップ，等速区間ncステップ，減速区間t_dステップ
+//加速度の並びが左右対称なので，1区間の速度の合計は(ステップ数)*Vs+(ステップ数+1)/2*(速度の変化)になる
+float bun_kyori(float Vs, float Vm, float Ve, int t_a, int nc, int t_d){
+	return (Vs*(t_a-1)*0.5+Ve*(t_d+1)*0.5+Vm*(t_a*0.5+nc+t_d*0.5))*0.001;
+}
+
+//等速区間なしで進む距離
+float bun_kyori_min(float Vs, float Vm, float Ve, float Amax, int a_step){
+	int a_step2, k2;
+	float acc2;
+	int t_a, t_d;
+	bun_katati(fmax(Vm-Vs,1.0), Amax, a_step, &a_step2, &k2, &acc2);
+	t_a=2*(a_step2-1)+k2;
+	bun_katati(fmax(Vm-Ve,1.0), Amax, a_step, &a_step2, &k2, &acc2);
+	t_d=2*(a_step2-1)+k2;
+	return bun_kyori(Vs, Vm, Ve, t_a, 0, t_d);
+}
+
+//1区間ぶん加速度を変化させる(acc2，Amaxは符号付き)．終わると加速度は0
+void bun_move(int a_step2, int k2, float acc2, float Amax){
+	float sub_acc;
+	sub_acc=Amax-(a_step2-1)*acc2;
+	G_a_Motor=acc2;
+	G_timer=0;
+	while(1){
+		if(G_timer==a_step2-1){
+			G_Abun_Motor=Amax;
+			G_a_Motor=0.0;
+			break;
+		}
+	}
+	G_timer=0;
+	while(1){
+		if(G_timer>=k2){
+			G_a_Motor=-sub_acc;
+			break;
+		}
+	}
+	G_timer=0;
+	while(1){
+		if(G_timer==1){
+			G_a_Motor=-acc2;
+		}
+		if(G_timer==a_step2-1){
+			G_a_Motor=0.0;
+			G_Abun_Motor=0.0;
+			break;
+		}
+	}
+}
+
+void sakaku_daikei(float Vs, float Vm, float Ve, float Amax, float Xall, int st_mode1, int st_mode2){
+	//Vs:始めの速度 Vm:最高速度 Ve:終わりの速度．後ろ向きはVmを負にする
+	float sgn, vs, vm, ve, amax, xall;
+	float v_lo, v_hi, v_mid, vm_bun;
+	float dv_a, dv_d, acc2_a, acc2_d, s_a, s_d;
+	int a_step2_a, k2_a, a_step2_d, k2_d;
+	int t_a, t_d, nc, i_bun;
+	int a_step;
+
+	//向きをそろえて正で計算する
+	if(Vm>=0.0){
+		sgn=1.0;
+	}else{
+		sgn=-1.0;
+	}
+	vs=Vs*sgn;
+	vm=Vm*sgn;
+	ve=Ve*sgn;
+	amax=fabs(Amax);
+	xall=fabs(Xall);
+
+	v_lo=fmax(vs,ve);
+	if(vm<v_lo){
+		vm=v_lo;
+	}
+	//最高速度を上げなくても(速度変化0の区間の分だけで)Xallを超える場合は，分割するステップ数を減らす
+	a_step=DAIKEI_A_STEP;
+	while((a_step>2)&&(bun_kyori_min(vs, v_lo, ve, amax, a_step)>xall)){
+		a_step--;
+	}
+	//等速区間なしでもXallを超える場合は，最高速度を下げる(二分探索)
+	if(bun_kyori_min(vs, vm, ve, amax, a_step)>xall){
+		v_hi=vm;
+		vm=v_lo;			//v_loでも超える場合はXallの中でVeまで変えきれない
+		if(bun_kyori_min(vs, v_lo, ve, amax, a_step)<xall){
+			for(i_bun=0;i_bun<20;i_bun++){
+				v_mid=(v_lo+v_hi)*0.5;
+				if(bun_kyori_min(vs, v_mid, ve, amax, a_step)<=xall){
+					v_lo=v_mid;
+				}else{
+					v_hi=v_mid;
+				}
+			}
+			vm=v_lo;
+		}
 	}
 
+	//加速区間と減速区間の形とステップ数を決める(速度変化が0の区間も形を作り，あとで比率を掛ける)
+	dv_a=fmax(vm-vs,1.0);
+	dv_d=fmax(vm-ve,1.0);
+	bun_katati(dv_a, amax, a_step, &a_step2_a, &k2_a, &acc2_a);
+	bun_katati(dv_d, amax, a_step, &a_step2_d, &k2_d, &acc2_d);
+	t_a=2*(a_step2_a-1)+k2_a;
+	t_d=2*(a_step2_d-1)+k2_d;
+
+	//等速区間のステップ数(切り上げ)
+	nc=0;
+	if(vm>0.0){
+		nc=(xall-bun_kyori(vs, vm, ve, t_a, 0, t_d))/(vm*0.001);
+		if(nc*(vm*0.001)!=(xall-bun_kyori(vs, vm, ve, t_a, 0, t_d))){
+			nc++;
+		}
+		if(nc<0){
+			nc=0;
+		}
+	}
+
+	//ステップ数を固定すると距離は最高速度の1次式になるので，ぴったりXallになる最高速度を求める
+	//Vs，Veはそのままで，加速区間と減速区間の加速度にそれぞれ比率を掛けて最高速度を合わせる
+	vm_bun=((xall/0.001)-(vs*(t_a-1)*0.5)-(ve*(t_d+1)*0.5))/(t_a*0.5+nc+t_d*0.5);
+	s_a=(vm_bun-vs)/dv_a;
+	s_d=(vm_bun-ve)/dv_d;
+
 	G_timer=0;
-	G_V_Motor=Vs;		//なくていい
+	G_V_Motor=Vs;
 	G_X_Motor=0.0;
 	sumEnc_L=0.0;
 	sumEnc_R=0.0;
 	G_theta=0.0;
-	G_Amax=Amax;
+	G_dtheta=0.0;
+	G_Amax=0.0;
 
 	G_fix_X=Xall;
 	subfix_X_flag=1;
@@ -212,42 +335,116 @@ void sakaku_daikei(float Vs, float Vm, float Ve, float Amax, float Xall, int st_
 	}else{
 		G_state=3;
 	}
-	while(1){
-		if((((float)G_timer)/1000)>=(fabs(t1)-0.001)){
-			G_Amax=0.0;
-			G_preV_Motor = G_V_Motor;
-			G_V_Motor = Vm;
-			G_dtheta = 0.0;
-			G_theta = 0.0;
-			break;
-		}
-	}
-	while(1){
-		if((fabs(G_X_Motor))>=fabs(Xall)-fabs(x2)){
-			G_Amax=Amax;
-			G_dtheta=-(PI/t2);
-			break;
-		}
-	}
+
+	bun_move(a_step2_a, k2_a, acc2_a*s_a*sgn, amax*s_a*sgn);
 	G_timer=0;
 	while(1){
-		if((((float)G_timer)/1000)>=(fabs(t2)-0.001)){
-			G_Amax=0.0;
-			G_preV_Motor = G_V_Motor;
-			G_V_Motor=Ve;
-			G_X_Motor=0.0;
-			sumEnc_L=0.0;
-			sumEnc_R=0.0;
-			G_dtheta=0.0;
-			G_theta=0.0;
+		if(G_timer>=nc){
 			break;
 		}
 	}
+	bun_move(a_step2_d, k2_d, -acc2_d*s_d*sgn, -amax*s_d*sgn);
+
+	G_preV_Motor = G_V_Motor;
+	G_V_Motor=Ve;
+	G_X_Motor=0.0;
+	sumEnc_L=0.0;
+	sumEnc_R=0.0;
 	G_fix_X=0.0;
 	subfix_X_flag=0;
 	ST_mode1=st_mode2;
 	ST_mode2=0;
 }
+
+//三角関数を使っていた時のsakaku_daikei
+//void sakaku_daikei(float Vs, float Vm, float Ve, float Amax, float Xall, int st_mode1, int st_mode2){
+//	float vm_s=Vm-Vs, vm_e=Vm-Ve;
+//	float x1, t1;
+//	float x2, t2;
+//	x1=(((Vm*Vm)-(Vs*Vs))*PI)/(4*Amax);
+//	t1=(PI*vm_s)/(2*Amax);
+//	x2=(((Vm*Vm)-(Ve*Ve))*PI)/(4*Amax);
+//	t2=(PI*vm_e)/(2*Amax);
+
+//	if(Xall>x1+x2){
+//		G_dtheta=PI/t1;
+//	}else{
+//		if(Vm>0.0){
+//			Vm=sqrt(((2*Amax*Xall)*PI_)+(((Vs*Vs)+(Ve*Ve))*0.5));
+//		}else{
+//			Vm=-sqrt(((2*Amax*Xall)*PI_)+(((Vs*Vs)+(Ve*Ve))*0.5));
+//		}
+//		vm_s=Vm-Vs;
+//		vm_e=Vm-Ve;
+//		x1=(((Vm*Vm)-(Vs*Vs))*PI)/(4*Amax);
+//		t1=(PI*vm_s)/(2*Amax);
+//		x2=(((Vm*Vm)-(Ve*Ve))*PI)/(4*Amax);
+//		t2=(PI*vm_e)/(2*Amax);
+//		G_dtheta=PI/t1;
+//	}
+
+//	G_timer=0;
+//	G_V_Motor=Vs;		//なくていい
+//	G_X_Motor=0.0;
+//	sumEnc_L=0.0;
+//	sumEnc_R=0.0;
+//	G_theta=0.0;
+//	G_Amax=Amax;
+
+//	G_fix_X=Xall;
+//	subfix_X_flag=1;
+//	ST_mode1=st_mode1;
+//	ST_mode2=st_mode2;
+
+//	if(Vm>=0){
+//		if(G_state==4){
+//			G_state=4;
+//		}else if(G_state==2){
+//			G_state=2;
+//		}else{
+//			G_state=1;
+//		}
+//		G_fix_X=Xall;
+//		subfix_X_flag=1;
+//	}else{
+//		G_state=3;
+//	}
+//	while(1){
+//		if((((float)G_timer)/1000)>=(fabs(t1)-0.001)){
+//			G_Amax=0.0;
+//			G_preV_Motor = G_V_Motor;
+//			G_V_Motor = Vm;
+//			G_dtheta = 0.0;
+//			G_theta = 0.0;
+//			break;
+//		}
+//	}
+//	while(1){
+//		if((fabs(G_X_Motor))>=fabs(Xall)-fabs(x2)){
+//			G_Amax=Amax;
+//			G_dtheta=-(PI/t2);
+//			break;
+//		}
+//	}
+//	G_timer=0;
+//	while(1){
+//		if((((float)G_timer)/1000)>=(fabs(t2)-0.001)){
+//			G_Amax=0.0;
+//			G_preV_Motor = G_V_Motor;
+//			G_V_Motor=Ve;
+//			G_X_Motor=0.0;
+//			sumEnc_L=0.0;
+//			sumEnc_R=0.0;
+//			G_dtheta=0.0;
+//			G_theta=0.0;
+//			break;
+//		}
+//	}
+//	G_fix_X=0.0;
+//	subfix_X_flag=0;
+//	ST_mode1=st_mode2;
+//	ST_mode2=0;
+//}
 
 void sakaku_kaiten(float wVm, float wAmax, float wXall, int a_step){
 	float wv1_sura, wv2_sura;
