@@ -255,6 +255,8 @@ void sakaku_kaiten(float wVm, float wAmax, float wXall, int a_step){
 	int kk2, k2_sura, k2_sura2;
 	float ca1,ca2,ca3;
 	int a_step2;
+	int n_all;
+	float ratio_sura;
 	acc_sura=wAmax/a_step;
 	acc_sura2=acc_sura;
 	a_step2=a_step;
@@ -263,9 +265,12 @@ void sakaku_kaiten(float wVm, float wAmax, float wXall, int a_step){
 	wv2_sura=(wVm-(wv1_sura*2));
 	k2_sura=wv2_sura/(wAmax*0.001);
 	k2_sura2=k2_sura;
-	if(wv2_sura!=k2_sura*(wAmax*0.001)){
+	if((wv2_sura!=k2_sura*(wAmax*0.001))||(k2_sura<0)){
 		a_step2=a_step+1;
 		k2_sura2=k2_sura-1;
+		if(k2_sura2<0){		//最大加速度に届かない場合
+			k2_sura2=0;
+		}
 		wv1_sura=wv1_sura+(wAmax*0.001);
 		wv2_sura=wAmax*0.001*k2_sura2;
 		acc_sura2=acc_sura*((wVm-wv2_sura)/(2*wv1_sura));
@@ -285,24 +290,38 @@ void sakaku_kaiten(float wVm, float wAmax, float wXall, int a_step){
 		}
 	}
 
+	a_step2=a_step;
+	acc_sura2=acc_sura;
 	wv1_sura=acc_sura*0.5*0.001*(a_step-1)*(a_step);
 	wv2_sura=(wVm-(wv1_sura*2));
 	k2_sura=wv2_sura/(wAmax*0.001);
 	k2_sura2=k2_sura;
-	if(wv2_sura!=k2_sura*(wAmax*0.001)){
+	if((wv2_sura!=k2_sura*(wAmax*0.001))||(k2_sura<0)){
 		a_step2=a_step+1;
 		k2_sura2=k2_sura-1;
+		if(k2_sura2<0){		//最大加速度に届かない場合
+			k2_sura2=0;
+		}
 		wv1_sura=wv1_sura+(wAmax*0.001);
 		wv2_sura=wAmax*0.001*k2_sura2;
 		acc_sura2=acc_sura*((wVm-wv2_sura)/(2*wv1_sura));
 	}
 	wxall_sura=wVm*(2*(a_step2-1)+k2_sura2)*0.001;
 
-	sub_acc=wAmax-(a_step2-1)*acc_sura2;
 	kk2=((wXall-wxall_sura)/(wVm*0.001));
 	if(kk2*(wVm*0.001)!=(wXall-wxall_sura)){
 		kk2++;
 	}
+	if(kk2<0){		//分割加速の分だけでwXallを超える場合は等速区間なし
+		kk2=0;
+	}
+	//it.cの加算で出る角度はwVm*総ステップ数*0.001になるので，速度と加速度全体に比率を掛けてぴったりwXallにする
+	n_all=2*(a_step2-1)+k2_sura2+kk2;
+	ratio_sura=wXall/(wVm*n_all*0.001);
+	wVm=wVm*ratio_sura;
+	wAmax=wAmax*ratio_sura;
+	acc_sura2=acc_sura2*ratio_sura;
+	sub_acc=wAmax-(a_step2-1)*acc_sura2;
 	G_state=6;
 	Change_PID();
 	G_wXturn=0.0;
