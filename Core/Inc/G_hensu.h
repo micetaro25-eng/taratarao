@@ -185,7 +185,6 @@ extern float G_dtheta;
 extern float G_Amax;
 extern float G_A_Motor;
 extern float G_a_Motor;
-extern float G_Abun_Motor;
 extern float G_preV_Motor;
 extern float G_V_Motor;
 extern float G_X_Motor;
