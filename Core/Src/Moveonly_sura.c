@@ -35,13 +35,13 @@ void sura_moveL(){
 	if(G_saitan_mode==0){
 		sinsura(-600.0 ,-8000.0 ,-91.0 ,G_tansakumae ,20.0, 0, 10);
 	}else if(G_saitan_mode==1){
-		sinsura(-690.0 ,10000.0 ,97.0 ,20.0 ,20.0, 0, 10);	//最短小回り探索
+		sinsura(-690.0 ,-10000.0 ,-97.0 ,20.0 ,20.0, 0, 10);	//最短小回り探索
 	}else if(G_saitan_mode==2){
-		sinsura(-1300.0 ,22000.0 ,95.0 ,3.0 ,33.0, 0, 10);	//最短小回り前距離小
+		sinsura(-1300.0 ,-22000.0 ,-95.0 ,3.0 ,33.0, 0, 10);	//最短小回り前距離小
 	}else if(G_saitan_mode==3){
 		sinsura(-1300.0 ,-25000.0 ,-89.0 ,9.0 ,3.0, 0, 5);	//吸引小回り
 	}else if(G_saitan_mode==4){
-		sinsura(-1600.0 ,70000.0 ,105.0 ,7.0 ,70.0, 0, 10);
+		sinsura(-1600.0 ,-70000.0 ,-105.0 ,7.0 ,70.0, 0, 10);
 	}
 
 	G_direction-=90;
@@ -70,9 +70,9 @@ void daisura_moveR(int mode){
 void daisura_moveL(int mode){
 	if(mode==0){
 		if(G_saitan_mode==1){
-			sinsura(-1700.0 ,26000.0 ,93.1 ,19.0 ,55.0, 1, 10);	//最短小回り探索
+			sinsura(-1700.0 ,-26000.0 ,-93.1 ,19.0 ,55.0, 1, 10);	//最短小回り探索
 		}else if(G_saitan_mode==2){
-			sinsura(-1700.0 ,26000.0 ,93.1 ,19.0 ,55.0, 1, 10);	//最短小回り
+			sinsura(-1700.0 ,-26000.0 ,-93.1 ,19.0 ,55.0, 1, 10);	//最短小回り
 		}else if(G_saitan_mode==3||G_saitan_mode==4){
 			sinsura(-1700.0 ,-19000.0 ,-90 ,19.0 ,58.0, 1, 10);	//最短吸引
 		}
@@ -108,9 +108,9 @@ void in180sura_moveR(int mode){
 void in180sura_moveL(int mode){
 	if(mode==0){
 		if(G_saitan_mode==1){
-			sinsura(-975.0 ,30000.0 ,185.2 ,30.0 ,73.0, 1, 10);		//最短小回り探索
+			sinsura(-975.0 ,-30000.0 ,-185.2 ,30.0 ,73.0, 1, 10);		//最短小回り探索
 		}else if(G_saitan_mode==2){
-			sinsura(-975.0 ,30000.0 ,185.2 ,30.0 ,73.0, 1, 10);		//最短小回り
+			sinsura(-975.0 ,-30000.0 ,-185.2 ,30.0 ,73.0, 1, 10);		//最短小回り
 		}else if(G_saitan_mode==3||G_saitan_mode==4){
 			sinsura(-950.0 ,-16000.0 ,-180.0 ,20.0 ,60.0, 1, 10);		//最短吸引
 		}
